@@ -1,0 +1,6 @@
+:root { color-scheme: light dark; --bg:#fff; --fg:#111; --muted:#555; --line:#ddd; }
+@media (prefers-color-scheme: dark) { :root { --bg:#111; --fg:#eee; --muted:#aaa; --line:#333; } }
+body { margin:0; font-family: system-ui, sans-serif; background:var(--bg); color:var(--fg); line-height:1.6; }
+main { max-width: 42rem; margin: 4rem auto; padding: 0 1.25rem; }
+h1 { margin:0; font-size: 2.2rem; } .role { color:var(--muted); margin-top:.2rem; }
+code { border:1px solid var(--line); padding:0 .3rem; border-radius:4px; } .meta { color:var(--muted); font-size:.85rem; }

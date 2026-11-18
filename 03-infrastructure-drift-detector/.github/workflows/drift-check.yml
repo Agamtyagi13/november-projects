@@ -1,0 +1,52 @@
+name: drift-check
+on:
+  schedule: [{ cron: "0 */6 * * *" }]     # every 6 hours
+  workflow_dispatch:
+    inputs:
+      simulate_drift:
+        description: "Demo: introduce drift in LocalStack before checking"
+        type: boolean
+        default: false
+
+permissions: { contents: read, issues: write }
+
+jobs:
+  unit-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 -m unittest -v tests.test_detector
+
+  detect:
+    needs: unit-tests
+    runs-on: ubuntu-latest
+    services:
+      localstack:
+        image: localstack/localstack:3.8
+        ports: ["4566:4566"]
+        env: { SERVICES: "s3,sqs" }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with: { terraform_version: 1.9.8, terraform_wrapper: false }
+      - name: "Provision baseline environment (demo, LocalStack)"
+        run: |
+          terraform -chdir=terraform init -input=false
+          terraform -chdir=terraform apply -auto-approve -input=false
+      - name: Simulate out-of-band changes (demo only)
+        if: ${{ inputs.simulate_drift }}
+        run: pip install awscli && ./scripts/simulate_drift.sh
+      - name: Detect drift (read-only, never applies)
+        id: drift
+        run: python3 drift_detector/detector.py --workdir terraform --report-dir reports
+        continue-on-error: true
+        env: { DRIFT_WEBHOOK_URL: "${{ secrets.DRIFT_WEBHOOK_URL }}" }
+      - uses: actions/upload-artifact@v4
+        with: { name: drift-report, path: reports/ }
+      - name: Open issue when drift is found
+        if: steps.drift.outcome == 'failure'
+        env: { GH_TOKEN: "${{ github.token }}" }
+        run: gh issue create --title "Infrastructure drift detected $(date -u +%F)" --body-file reports/drift-report.md
+      - name: Fail job on drift
+        if: steps.drift.outcome == 'failure'
+        run: exit 1

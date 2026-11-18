@@ -1,0 +1,10 @@
+[Unit]
+Description=Linux server health check
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/health-monitor.sh
+SuccessExitStatus=0 1
+NoNewPrivileges=yes
+ProtectSystem=full
+ReadWritePaths=/var/log /var/tmp

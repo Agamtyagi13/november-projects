@@ -1,0 +1,1 @@
+*/5 * * * * root /usr/local/bin/health-monitor.sh >/dev/null 2>&1   # alternative to the systemd timer
